@@ -117,12 +117,12 @@ Współczynnik dominacji ligowej wynosi **$E = 6.5$**.
 
 ### 1. Liczba rozegranych meczów w sezonie:
 
-$$\text{efektywne\_mecze} = \max\left(0, \; \left(\text{bazowa\_ilosc\_meczow} \times \text{mnoznik\_roli} \times (1 - \text{kara\_do\_meczow})\right) - \text{gamesMissed}\right)$$
+$$\text{efektywneMecze} = \max\left(0, \; \left(\text{bazowaIloscMeczow} \times \text{mnoznikRoli} \times (1 - \text{karaDoMeczow})\right) - \text{gamesMissed}\right)$$
 
-$$\text{games\_played\_ratio} = \frac{\text{efektywne\_mecze}}{40}$$
+$$\text{gamesPlayedRatio} = \frac{\text{efektywneMecze}}{40}$$
 
 ### 2. Wygenerowane bramki i asysty:
 
-$$\text{bramki} = \text{efektywne\_mecze} \times \text{bazowe\_g\_na\_gre} \times \left(\frac{\text{ovr}}{\text{ovr\_liga}}\right)^{6.5} \times \text{form\_mult}$$
+$$\text{bramki} = \text{efektywneMecze} \times \text{bazoweGnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^{6.5} \times \text{formMult}$$
 
-$$\text{asysty} = \text{efektywne\_mecze} \times \text{bazowe\_a\_na\_gre} \times \left(\frac{\text{ovr}}{\text{ovr\_liga}}\right)^{6.5} \times \text{form\_mult}$$
+$$\text{asysty} = \text{efektywneMecze} \times \text{bazoweAnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^{6.5} \times \text{formMult}$$
