@@ -70,6 +70,9 @@ Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
 ### Obliczanie bieżącej formy:
 $$\text{forma} = \text{rand}(0, 100) + \text{profesjonalizm}$$
 
+Do rzutu na formę dodawany jest profesjonalizm. Ujemny profesjonalizm zwiększy szanse na słaby sezon, a wysoki profesjonalizm, zwiększy szanse na dobry sezon. 
+Np. professionalism=10 zwiększy szansę na sezon życia z 2%->12% oraz sprawi, że najgorsza forma jaka może się wylosować to słaba itp.
+
 ---
 
 ## 6. Kontuzje i Podatność na Urazy
