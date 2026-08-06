@@ -1,4 +1,4 @@
-import { Footballer, Club, Position } from "./entities";
+import { Footballer, Club, Position, Injury, INJURIES} from "./entities";
 
 export const getRandomFloat = (min: number, max: number): number => {
     return Number((Math.random() * (max - min) + min).toFixed(2));
@@ -78,4 +78,29 @@ export const seasonalForm = (professionalism: number): SeasonalFormResult => {
 
     return { name: "Sezon Zycia", multiplier: 1.75, gamesPenalty: 0 };
 };
+
+export const simulateInjury = (injuryRisk: number): Injury | null =>{
+    const injuryRoll = getRandomFloat(0,100);
+    console.log(`injuryRoll: ${injuryRoll}`);
+    if (injuryRoll <= injuryRisk){
+        let injurySeverityRoll = getRandomFloat(0,100);
+        console.log(`injurySeverityRoll: ${injurySeverityRoll}`);
+        for(const injury of Object.values(INJURIES)){
+            if (injurySeverityRoll <= injury.probability){
+                return injury;
+            }
+            injurySeverityRoll -= injury.probability;
+            
+        }
+    }
+    return null;
+}
+
+for (let i = 0; i < 100; i++) {
+    const injury = simulateInjury(10);
+    if (injury) {
+        console.log(`Injury: ${injury.name}, Games Missed: ${injury.gamesMissed[0]}-${injury.gamesMissed[1]}, OVR Drop: ${injury.ovrDrop ?? "N/A"}, Career Ending: ${injury.careerEnding ?? false}`);   
+    }
+}
+
 
