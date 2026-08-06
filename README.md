@@ -60,8 +60,8 @@ Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
 
 | Szansa | Dyspozycja | Mnożnik statystyk ($\text{formMult}$) | Kara do meczów ($\text{karaDoMeczow}$) |
 | :--- | :--- | :--- | :--- |
-| **5%** | Beznadziejna | $0.50$ | $-30\%$ ($0.30$) |
-| **15%** | Słaba | $0.80$ | $-15\%$ ($0.15$) |
+| **5%** | Beznadziejna | $0.50$ | $-50\%$ ($0.50$) |
+| **15%** | Słaba | $0.80$ | $-25\%$ ($0.25$) |
 | **50%** | Średnia | $1.00$ | $0\%$ ($0.00$) |
 | **20%** | Dobra | $1.20$ | $0\%$ ($0.00$) |
 | **8%** | Bardzo Dobra | $1.40$ | $0\%$ ($0.00$) |
