@@ -61,10 +61,10 @@ export const seasonalForm = (professionalism: number): SeasonalFormResult => {
     const form = getRandomFloat(0, 100) + professionalism;
 
     if (form <= 5) {
-        return { name: "Beznadziejna", multiplier: 0.5, gamesPenalty: -0.30 };
+        return { name: "Beznadziejna", multiplier: 0.5, gamesPenalty: -0.50 };
     }
     if (form <= 20) {
-        return { name: "Slaba", multiplier: 0.8, gamesPenalty: -0.15 };
+        return { name: "Slaba", multiplier: 0.8, gamesPenalty: -0.25 };
     }
     if (form <= 70) {
         return { name: "Srednia", multiplier: 1.0, gamesPenalty: 0 };
@@ -81,10 +81,8 @@ export const seasonalForm = (professionalism: number): SeasonalFormResult => {
 
 export const simulateInjury = (injuryRisk: number): Injury | null =>{
     const injuryRoll = getRandomFloat(0,100);
-    console.log(`injuryRoll: ${injuryRoll}`);
     if (injuryRoll <= injuryRisk){
         let injurySeverityRoll = getRandomFloat(0,100);
-        console.log(`injurySeverityRoll: ${injurySeverityRoll}`);
         for(const injury of Object.values(INJURIES)){
             if (injurySeverityRoll <= injury.probability){
                 return injury;
@@ -96,11 +94,5 @@ export const simulateInjury = (injuryRisk: number): Injury | null =>{
     return null;
 }
 
-for (let i = 0; i < 100; i++) {
-    const injury = simulateInjury(10);
-    if (injury) {
-        console.log(`Injury: ${injury.name}, Games Missed: ${injury.gamesMissed[0]}-${injury.gamesMissed[1]}, OVR Drop: ${injury.ovrDrop ?? "N/A"}, Career Ending: ${injury.careerEnding ?? false}`);   
-    }
-}
 
 
