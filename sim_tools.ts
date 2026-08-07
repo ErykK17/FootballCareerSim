@@ -1,4 +1,4 @@
-import { Footballer, Club, Position, Injury, INJURIES } from "./entities";
+import { Footballer, Club, Position, Injury, INJURIES, POSITION_GA_RATES, AGE_GROWTH_FACTOR, growthSoftCap } from "./entities";
 
 export const getRandomFloat = (min: number, max: number): number => {
     return Number((Math.random() * (max - min) + min).toFixed(2));
@@ -34,18 +34,6 @@ export const determinePlaytime = (footballer: Footballer, club: Club): number =>
     }
 
 }
-
-export const POSITION_GA_RATES: Record<string, [number, number]> = {
-    "ST": [0.35, 0.10],
-    "LW": [0.25, 0.2],
-    "RW": [0.25, 0.15],
-    "CAM": [0.20, 0.18],
-    "CM": [0.08, 0.10],
-    "CDM": [0.03, 0.05],
-    "LB": [0.02, 0.07],
-    "RB": [0.02, 0.07],
-    "CB": [0.035, 0.015],
-};
 
 export const baseGAPerGame = (position: Position): [number, number] => {
     return POSITION_GA_RATES[position.toUpperCase()] ?? [0.0, 0.0]
@@ -101,25 +89,6 @@ export const calculateGA = (position: Position, ovr: number, formMultiplier: num
     return { goals: xgoals, assists: xassists };
 }
 
-
-const samplePoisson = (lambda: number): number => {
-    // Zabezpieczenie przed xG/xA <= 0
-    if (lambda <= 0) return 0;
-    
-    const rand = Math.random();
-    let k = 0;
-    let p = Math.exp(-lambda); // P(K = 0)
-    let cumulativeProbability = p;
-    
-    while (rand > cumulativeProbability) {
-        k++;
-        p = p * (lambda / k);
-        cumulativeProbability += p;
-    }
-    
-    return k;
-};
-
 export const simulateMatchGA = (xG: number, xA: number): { goals: number; assists: number } => {
 
     const simulateGoals = (expectedValue: number): number => {
@@ -153,33 +122,56 @@ export const simulateMatchGA = (xG: number, xA: number): { goals: number; assist
         assists: simulateGoals(xA)
     };
 };
-let ga = calculateGA("ST", 81, 1, 76, 77);
-console.log(ga);
 
-console.log(ga.goals);
-console.log(ga.assists);
-let totalGoals = 0;
-let totalAssists = 0;
-let i = 0;
-let Hattricks = 0;
-let quadruples = 0;
-let pentacles = 0;
-for (i = 0; i < 34; i++) {
-    const matchResult = simulateMatchGA(ga.goals, ga.assists);
-    totalGoals += matchResult.goals;
-    totalAssists += matchResult.assists;
-    if (matchResult.goals >= 3) {
-        Hattricks++;
+export const simulateGrowth = (
+    age: number,
+    ovr: number,
+    potential: number,
+    clubOvr: number,
+    gamesPlayed: number,
+    gamesToPlay: number,
+    seasonalFormMultiplier: number,
+    professionalism: number
+): number => {
+    // 1. Zabezpieczenie przed dzieleniem przez 0
+    const playtimeRatio = gamesToPlay > 0 ? Math.min(1, Math.max(0, gamesPlayed / gamesToPlay)) : 0;
+
+    // 2. Playtime factor (Poprawione progi wiekowe <= 21 i <= 31)
+    let playtimeFactor = 0;
+    if (age <= 21) {
+        playtimeFactor = (playtimeRatio * 1.6) - 0.5;
+    } else {
+        playtimeFactor = (playtimeRatio * 0.8) + 0.2;
     }
-    if (matchResult.goals >= 4) {
-        quadruples++;
+
+    const professionalismFactor = 1 + (professionalism * 0.03);
+
+    let growth = 0;
+
+    // 3. Rozdzielenie logiki dla Weteranów (>= 32 lata)
+    if (age >= 32) {
+        const naturalDecline = -2 * Math.abs(AGE_GROWTH_FACTOR(age));
+        const formShield = (seasonalFormMultiplier - 0.5) * 0.8;
+        const profShield = professionalism * 0.06;
+
+        growth = Math.round(naturalDecline + formShield + profShield);
+    } else {
+        // Główny wzór dla młodych / szczytowych graczy
+        const potentialGap = Math.max(0, potential - ovr);
+        const baseGrowthRate = (potentialGap / 4) + 0.5;
+        const ageFactor = AGE_GROWTH_FACTOR(age);
+        const softCap = growthSoftCap(ovr, clubOvr);
+
+        const rawGrowth = baseGrowthRate * ageFactor * professionalismFactor * playtimeFactor * seasonalFormMultiplier * softCap;
+        growth = Math.round(rawGrowth);
     }
-    if (matchResult.goals >= 5) {
-        pentacles++;
+
+    // 4. Zabezpieczenie przed przekroczeniem potencjału (chyba że Sezon Życia)
+    if (seasonalFormMultiplier < 1.5 && (ovr + growth) > potential) {
+        growth = Math.max(0, potential - ovr);
     }
-}
-console.log(`Total Goals in 34 matches: ${totalGoals}, ${(totalGoals / 34).toFixed(2)} per match`);
-console.log(`Total Assists in 34 matches: ${totalAssists}, ${(totalAssists / 34).toFixed(2)} per match`);
-console.log(`Hattricks: ${Hattricks}`);
-console.log(`Quadruples: ${quadruples}`);
-console.log(`Pentacles: ${pentacles}`);
+
+    return growth;
+};
+
+

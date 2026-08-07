@@ -81,8 +81,8 @@ export class Footballer {
         return this._professionalism;
     }
     set professionalism(value: number) {
-        if (value < -5) this._professionalism = -5;
-        else if (value > 5) this._professionalism = 5;
+        if (value < -10) this._professionalism = -10;
+        else if (value > 10) this._professionalism = 10;
         else this._professionalism = value;
     }
 
@@ -195,3 +195,49 @@ export const INJURIES: Record<string, Injury> = {
     },
     
 };
+
+export const POSITION_GA_RATES: Record<string, [number, number]> = {
+    "ST": [0.35, 0.10],
+    "LW": [0.25, 0.2],
+    "RW": [0.25, 0.15],
+    "CAM": [0.20, 0.18],
+    "CM": [0.08, 0.10],
+    "CDM": [0.03, 0.05],
+    "LB": [0.02, 0.07],
+    "RB": [0.02, 0.07],
+    "CB": [0.035, 0.015],
+};
+
+export const AGE_GROWTH_FACTOR = (age: number): number => {
+    if (age <= 21) {
+        return 1.0;
+    }
+    else if (age <= 25) {
+        return 0.8;
+    }
+    else if(age <=29) {
+        return 0.45;
+    }
+    else {
+        return 0.2;
+    }
+
+}
+
+export const growthSoftCap = (
+    ovr: number,
+    clubOvr: number
+): number => {
+    const ovrDiff = ovr - clubOvr;
+    if (ovrDiff <= 4) {
+        return 1.00;
+    } else if (ovrDiff <= 7) {
+        return 0.80;
+    } else if (ovrDiff <= 9) {
+        return 0.50;
+    } else if (ovrDiff <= 11) {
+        return 0.20;
+    } else {
+        return 0.00;
+    }
+}
