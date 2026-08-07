@@ -1,155 +1,162 @@
-# Symulator Kariery Piłkarskiej — Dokumentacja Logiki
+# Football Player Simulation Core
 
-## 1. Atrybuty Początkowe Zawodnika
-
-* **`poczatkowy_ovr`**: Wartość losowa z przedziału $[50, 65]$.
-* **`potencjal`**: Wartość losowa z przedziału $[\text{poczatkowyOvr}, 99]$.
-* **`profesjonalizm`**: Wartość losowa z przedziału $[-5, 5]$ (wpływa na stabilność formy i rozwój zawodnika).
-* **`injuryRisk`**: Podatność na kontuzje, przyjmuje wartości z przedziału $[1, 20]$ (`clamp(1, 20)`).
+Kompleksowy silnik symulacji piłkarskiej przeznaczony do zarządzania atrybutami, rozwojem, regresem wiekowym, wydajnością meczową, generowaniem formy oraz dynamiką kontuzji zawodników. Projekt wykorzystuje architekturę zorientowaną obiektowo (OOP) napisaną w języku TypeScript.
 
 ---
 
-## 2. Status w Zespole i Czas Gry
+## System Klas i Struktura Danych
 
-Rola zawodnika w drużynie zależy od różnicy między jego poziomem (`ovr`) a średnim poziomem klubu (`club_ovr`):
+### Klasa Footballer
+Główna encja systemu reprezentująca piłkarza. Metody dostępowe gwarantują walidację wartości w dopuszczalnych zakresach (enkapsulacja danych).
 
-$$\text{pozycjaWSkladzie} = \text{ovr} - \text{clubOvr}$$
+* **ovr** (`number`): Aktualne umiejętności ogólne zawodnika **[Zakres: 1–99]**.
+* **potential** (`number`): Maksymalny pułap umiejętności, jaki gracz może osiągnąć **[Zakres: 1–99]**.
+* **professionalism** (`number`): Wpływ cech osobowości na podejście do treningów i regeneracji **[Zakres: -10 do 10]**.
+* **injuryRisk** (`number`): Bazowe ryzyko odniesienia kontuzji podczas meczu lub treningu **[Zakres: 1 do 20]**.
+* **age** (`number`): Wiek zawodnika **[Domyślnie: 16]**. Modyfikowany bezpośrednio metodą `ageUp()`.
+* **position** (`Position`): Przypisana nominalna pozycja boiskowa.
+* **club** (`Club`): Klub, w którym aktualnie występuje gracz.
+* **clubStatus** (`string`): Rola zawodnika w zespole (np. Wychowanek, Kluczowy gracz, Rezerwowy).
+* **form** (`string`): Aktualna dyspozycja psychofizyczna (np. Tragiczna, Słaba, Przeciętna, Wysoka, Fenomenalna).
 
-Mnożnik czasu gry ($\text{mnoznikRoli}$) losowany jest z przedziału przypisanego do danej roli:
-
-| Różnica OVR | Rola w zespole | Mnożnik czasu gry ($\text{mnoznikRoli}$) |
-| :--- | :--- | :--- |
-| $\ge +5$ | **Gwiazda** | $0.90 - 0.95$ |
-| $+3$ do $+4$ | **Ważny zawodnik** | $0.80 - 0.90$ |
-| $0$ do $+2$ | **Pierwszy skład** | $0.70 - 0.80$ |
-| $-2$ do $0$ | **Zawodnik rotacyjny** | $0.30 - 0.50$ |
-| $\le -3$ | **Rezerwowy** | $0.05 - 0.20$ |
-
----
-
-## 3. Bazowa Liczba Meczów w Sezonie
-
-Liczba meczów dostępnych dla klubu w sezonie ($\text{bazowaIloscMeczow}$):
-
-* **Bez Ligi Mistrzów (NO UCL):** $40$ meczów
-* **Z Ligą Mistrzów (UCL):** $60$ meczów
+### Klasy Wspierające
+* **Club**: Zawiera statystyki zespołu, w tym ogólny poziom drużyny (`clubOvr`) oraz przypisanie do ligi.
+* **League**: Reprezentuje ligę piłkarską ze skorelowanym poziomem trudności/renomy (`leagueOvr`) oraz krajem.
 
 ---
 
-## 4. Bazowe Statystyki na Mecz (G, A)
+## Logika Rozwoju i Regresu
 
-Średnia bazowa liczba bramek ($G$) i asyst ($A$) generowana na mecz przez zawodnika bez uwzględnienia jego umiejętności oraz formy, zależna od pozycji:
+Progres zawodnika jest wyliczany dynamicznie na podstawie kombinacji wieku, potencjału, profesjonalizmu oraz poziomu klubu, w którym występuje.
 
-| Pozycja | Bazowe Gole na mecz ($G$) | Bazowe Asysty na mecz ($A$) |
-| :--- | :--- | :--- |
-| **ST** (Napastnik) | $0.35$ | $0.10$ |
-| **LW / RW** (Skrzydłowy) | $0.25$ | $0.20$ |
-| **CAM** (Ofensywny pomocnik) | $0.20$ | $0.20$ |
-| **CM** (Środkowy pomocnik) | $0.10$ | $0.15$ |
-| **CDM** (Defensywny pomocnik) | $0.05$ | $0.15$ |
-| **LB / RB** (Boczny obrońca) | $0.025$ | $0.10$ |
-| **CB** (Środkowy obrońca) | $0.05$ | $0.025$ |
+### 1. Wpływ Wieku (AGE GROWTH FACTOR)
+Zgodnie z naturalną krzywą rozwoju sportowca, tempo zdobywania umiejętności zależy od przedziału wiekowego:
 
----
+| Przedział Wiekowy | Mnożnik Rozwoju | Charakterystyka |
+| :--- | :---: | :--- |
+| **Młodzi ($\le$ 21 lat)** | `1.00` | Maksymalny przyrost punktów umiejętności. |
+| **Wcześni Seniorzy (22–25 lat)** | `0.80` | Ustabilizowany rozwój, szlifowanie talentu. |
+| **Doświadczeni (26–29 lat)** | `0.45` | Osiągnięcie szczytu możliwości (Prime). |
+| **Weterani ($\ge$ 30 lat)** | `0.20` | Wyhamowanie rozwoju, podatność na regres. |
 
-## 5. Dyspozycja Sezonowa i Forma
+### 2. Ogranicznik Klubowy (growthSoftCap)
+Zawodnik występujący w klubie o niskim poziomie (`clubOvr`) w stosunku do swoich umiejętności napotyka opór w dalszym rozwoju:
 
-Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
+$$\text{Różnica OVR} = \text{ovr} - \text{clubOvr}$$
 
-### Tabela Dyspozycji Sezonowej:
-
-| Szansa | Dyspozycja | Mnożnik statystyk ($\text{formMult}$) | Kara do meczów ($\text{karaDoMeczow}$) |
-| :--- | :--- | :--- | :--- |
-| **5%** | Beznadziejna | $0.50$ | $-50\%$ ($0.50$) |
-| **15%** | Słaba | $0.80$ | $-25\%$ ($0.25$) |
-| **50%** | Średnia | $1.00$ | $0\%$ ($0.00$) |
-| **20%** | Dobra | $1.20$ | $0\%$ ($0.00$) |
-| **8%** | Bardzo Dobra | $1.40$ | $0\%$ ($0.00$) |
-| **2%** | Sezon Życia | $1.6$ | $0\%$ ($0.00$) |
-
-### Obliczanie bieżącej formy:
-$$\text{forma} = \text{rand}(0, 100) + \text{profesjonalizm}$$
-
-Do rzutu na formę dodawany jest profesjonalizm. Ujemny profesjonalizm zwiększy szanse na słaby sezon, a wysoki profesjonalizm, zwiększy szanse na dobry sezon. 
-Np. professionalism=10 zwiększy szansę na sezon życia z 2%->12% oraz sprawi, że najgorsza forma jaka może się wylosować to słaba itp.
+* **Różnica $\le$ 4 pkt**: `1.00` (100% wydajności treningu)
+* **Różnica 5–7 pkt**: `0.80` (80% wydajności treningu)
+* **Różnica 8–9 pkt**: `0.50` (50% wydajności treningu)
+* **Różnica 10–11 pkt**: `0.20` (20% wydajności treningu)
+* **Różnica $\ge$ 12 pkt**: `0.00` (Brak dalszego rozwoju w tym klubie)
 
 ---
 
-## 6. Kontuzje i Podatność na Urazy
+## Mechanika Losowania Formy Zawodnika
 
-W każdym sezonie przeprowadzana jest symulacja zdrowia zawodnika na podstawie jego parametru `injuryRisk` ($1 - 20$).
+Forma gracza determinowana jest na początku każdego okresu symulacji lub przed rozegraniem serii spotkań. Losowanie bazuje na rozkładzie prawdopodobieństwa zmodyfikowanym o parametr **professionalism**:
 
-### 1. Test na wystąpienie kontuzji:
-$$\text{injuryRoll} = \text{rand}(0.0, 100.0)$$
+* **Wysoki Profesjonalizm (> 5)**: Przesuwa wagę losowania w stronę wyższych poziomów formy (mniejsza fluktuacja dyspozycji).
+* **Niski Profesjonalizm (< 0)**: Zwiększa prawdopodobieństwo wylosowania słabej lub tragicznej formy.
 
-Jeśli $\text{injuryRoll} \le \text{injuryRisk}$, gracz odnosi kontuzję.
+### Mnożniki Wpływu Formy na OVR i Rozwój
 
-### 2. Wybór typu kontuzji:
-Losowana jest wartość $\text{injurySeverityRoll} = \text{rand}(0.0, 100.0)$, a typ urazu dobierany jest z tabeli ważonej.
-
-### Tabela Urazów (`INJURIES`):
-
-| Nazwa Urazu | Waga (%) | Opuszczone Mecze (`gamesMissed`) | Spadek OVR (`ovrDrop`) | Koniec Kariery (`careerEnding`) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Lekkie urazy** | | | | |
-| Stłuczenie mięśnia | $30.0\%$ | $1 - 2$ | $0$ | NIE |
-| Lekkie skręcenie kostki | $25.0\%$ | $1 - 3$ | $0$ | NIE |
-| Naciągnięcie mięśnia dwugłowego | $15.0\%$ | $2 - 4$ | $0$ | NIE |
-| Przeciążenie pachwiny | $12.0\%$ | $2 - 5$ | $0$ | NIE |
-| **Średnie urazy** | | | | |
-| Skręcenie stawu skokowego (II st.) | $5.0\%$ | $4 - 8$ | $-1$ | NIE |
-| Złamanie palca u nogi | $4.0\%$ | $3 - 6$ | $-1$ | NIE |
-| Naderwanie mięśnia pachwiny | $2.0\%$ | $5 - 10$ | $-1$ | NIE |
-| Wstrząśnienie mózgu | $2.0\%$ | $2 - 4$ | $0$ | NIE |
-| **Ciężkie urazy** | | | | |
-| Uszkodzenie łąkotki | $1.0\%$ | $8 - 16$ | $-2$ | NIE |
-| Złamanie kości piszczelowej | $1.0\%$ | $15 - 25$ | $-3$ | NIE |
-| Zerwanie ścięgna Achillesa | $1.0\%$ | $25 - 35$ | $-4$ | NIE |
-| Zerwanie więzadeł (ACL) | $1.0\%$ | $30 - 40$ | $-5$ | NIE |
-| **Urazy kończące karierę** | | | | |
-| Zawał serca | $1.0\%$ | $0$ | $0$ | **TAK** |
+| Poziom Formy | Mnożnik Statystyk Meczowych | Mnożnik Przyrostu OVR |
+| :--- | :---: | :---: |
+| **Tragiczna** | `0.70` | `0.20` |
+| **Słaba** | `0.85` | `0.60` |
+| **Przeciętna** | `1.00` | `1.00` |
+| **Wysoka** | `1.15` | `1.25` |
+| **Fenomenalna** | `1.30` | `1.50` |
 
 ---
 
-## 7. Wzory Końcowe Statystyk Sezonowych
+## Generator Statystyk Sezonowych (Koniec Sezonu)
 
-### 1. Liczba rozegranych meczów w sezonie:
+Na koniec roku symulacyjnego silnik wylicza końcowy dorobek meczowy zawodnika (Liczba Meczów, Bramki, Asysty, Żółte i Czerwone Kartki).
 
-$$\text{efektywneMecze} = \max\left(0, \; \left(\text{bazowaIloscMeczow} \times \text{pozycjaWSkladzie} \times (1 - \text{karaDoMeczow})\right) - \text{gamesMissed}\right)$$
+### 1. Liczba Rozegranych Meczów
+Liczba występów w sezonie zależy od pozycji w klubie (`clubStatus`) oraz absencji spowodowanych kontuzjami:
+* **Kluczowy gracz**: 85%–95% możliwych spotkań w sezonie.
+* **Wychowanek / Rezerwowy**: 30%–60% możliwych spotkań w sezonie.
+* **Korekta o Kontuzje**: Od łącznej liczby odejmowane są mecze opuszczone przez urazy z tabeli `INJURIES`.
 
-$$\text{gamesPlayedRatio} = \frac{\text{efektywneMecze}}{40}$$
+### 2. Wyliczanie Bramek i Asyst (G/A)
+Wyjściowa liczba ramek i asyst wyliczana jest na podstawie średniej dla pozycji (`POSITION GA RATES`) oraz liczby rozegranych meczów, a następnie modyfikowana przez formę i poziom umiejętności:
 
-### 2. Funkcja calculateGA
+$$\text{Oczekiwane Bramki} = \text{Mecze} \times \text{Bramki Na Mecz} \times \left(\frac{\text{ovr}}{75}\right) \times \text{Mnożnik Formy}$$
 
-Funkcja `calculateGA(position, ovr, formMultiplier, clubOVR, leagueOVR)` oblicza oczekiwaną liczbę bramek i asyst na mecz dla danego zawodnika. Najpierw pobiera bazowe wartości `G` i `A` dla pozycji z tabeli 4, a następnie mnoży je przez:
-- relatywny poziom zawodnika względem ligi: $\left(\frac{\text{ovr}}{\text{leagueOVR}}\right)^3$
-- relatywny poziom klubu względem ligi: $\left(\frac{\text{clubOVR}}{\text{leagueOVR}}\right)^2$
-- sezonową formę: `formMultiplier`
+---
 
-Dzięki temu funkcja zwraca wartości `xG` i `xA`, czyli średnią liczbę bramek i asyst oczekiwaną w jednym meczu.
+## Wydajność na Boisku (POSITION GA RATES)
 
-$$\text{xG} = \text{bazoweGnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^3 \times \left(\frac{\text{clubOVR}}{\text{ovrLiga}}\right)^2 \times \text{formMult}$$
+| Pozycja | Kod | Oczekiwane Bramki / Mecz | Oczekiwane Asysty / Mecz |
+| :--- | :---: | :---: | :---: |
+| **Napastnik** | `ST` | 0.35 | 0.10 |
+| **Lewoskrzydłowy** | `LW` | 0.25 | 0.20 |
+| **Prawoskrzydłowy** | `RW` | 0.25 | 0.15 |
+| **Ofensywny Pomocnik** | `CAM` | 0.20 | 0.18 |
+| **Środkowy Pomocnik** | `CM` | 0.08 | 0.10 |
+| **Defensywny Pomocnik** | `CDM` | 0.03 | 0.05 |
+| **Lewy Obrońca** | `LB` | 0.02 | 0.07 |
+| **Prawy Obrońca** | `RB` | 0.02 | 0.07 |
+| **Środkowy Obrońca** | `CB` | 0.035 | 0.015 |
 
-$$\text{xA} = \text{bazoweAnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^3 \times \left(\frac{\text{clubOVR}}{\text{ovrLiga}}\right)^2 \times \text{formMult}$$
+---
 
-### 3. Funkcja samplePoisson
+## System Kontuzji i Urazów (INJURIES)
 
-Funkcja `samplePoisson(lambda)` zamienia wartość oczekiwaną (`xG` lub `xA`) w losowy wynik meczu zgodny z rozkładem Poissona. Jeśli `lambda <= 0`, zwraca `0`. W przeciwnym razie losuje liczbę zdarzeń, gdzie prawdopodobieństwo wystąpienia $k$ trafień jest budowane krok po kroku aż do przekroczenia losowej wartości. Dzięki temu z jednej średniej wartości powstaje realistyczna liczba goli lub asyst w konkretnym meczu.
+Zdarzenia medyczne generowane są na podstawie parametru `injuryRisk`. Kontuzje podzielone są według stopnia dolegliwości i wpływu na karierę:
 
-### 4. Wygenerowane bramki i asysty:
+### Kategoria 1: Urazy Lekkie
+* **Cechy**: Brak permanentnego spadku statystyk. Krótki czas absencji.
+* **Przykłady**: Stłuczenie mięśnia (1-2 mecze), Lekkie skręcenie kostki (2-4 mecze), Naciągnięcie dwugłowego (2-5 meczów), Przeciążenie pachwiny (1-3 mecze).
 
-Bramki i asysty generowane są na podstawie liczby rozegranych meczów, wartości `xG`/`xA` uzyskanych z `calculateGA` oraz wyniku losowania z `samplePoisson`:
+### Kategoria 2: Urazy Średnie
+* **Cechy**: Ryzyko chwilowego lub trwałego spadku umiejętności o **-1 OVR**.
+* **Przykłady**: Skręcenie kostki II stopnia (3-6 meczów), Złamanie palca (2-5 meczów), Naderwanie pachwiny (4-8 meczów), Wstrząśnienie mózgu (2-4 mecze).
 
-$$\text{bramki} = \text{samplePoisson}(\text{xG})$$
+### Kategoria 3: Urazy Ciężkie
+* **Cechy**: Długa przerwa od gry oraz gwarantowany spadek umiejętności `OVR`:
+  * **Uszkodzenie łąkotki**: Przerwa 8–16 meczów | Spadek: **-2 OVR**
+  * **Złamanie kości piszczelowej**: Przerwa 12–25 meczów | Spadek: **-3 OVR**
+  * **Zerwanie ścięgna Achillesa**: Przerwa 20–35 meczów | Spadek: **-4 OVR**
+  * **Zerwanie więzadeł krzyżowych (ACL)**: Przerwa 25–40 meczów | Spadek: **-5 OVR**
 
-$$\text{asysty} = \text{samplePoisson}(\text{xA})$$
+### Kategoria 4: Urazy Krytyczne
+* **Zawał serca / Poważna wada kardiologiczna**: Skutkuje natychmiastowym wymuszonym zakończeniem kariery sportowej (`careerEnding: true`).
 
-Gdzie:
-- **`efektywneMecze`** — liczba faktycznie rozegranych meczów (po uwzględnieniu czasu gry i kontuzji)
-- **`bazoweGnaGre`** / **`bazoweAnaGre`** — średnia liczba bramek/asyst na mecz dla danej pozycji (tabela 4)
-- **`ovr`** — obecny poziom zawodnika
-- **`clubOVR`** — średni poziom zawodników w klubie
-- **`ovrLiga`** — średni poziom zawodników w lidze
-- **`formMult`** — mnożnik formy sezonowej (tabela 5)
-- **`xG` / `xA`** — oczekiwane wartości bramek i asyst na mecz
-- **`samplePoisson`** — funkcja losująca realistyczny wynik zgodny z rozkładem Poissona
+---
+
+## Przykłady Inicjalizacji i Użycia
+
+### Kompletny Przepływ Kodowy
+
+```typescript
+import { Footballer, Club, League } from './footballer';
+
+// 1. Definiowanie Struktury Ligi i Klubu
+const laLiga = new League(85, "Spain");
+const realMadrid = new Club(laLiga, 86);
+
+// 2. Inicjalizacja Nowego Gracza
+const player = new Footballer({
+    ovr: 75,
+    potential: 90,
+    professionalism: 9,
+    position: "CAM",
+    club: realMadrid,
+    injuryRisk: 3,
+    age: 17,
+    clubStatus: "Młody Talent",
+    form: "Bardzo Wysoka"
+});
+
+// 3. Weryfikacja Danych
+console.log(`Początkowy wiek: ${player.age}`); // 17
+console.log(`Początkowy OVR: ${player.ovr}`);   // 75
+
+// 4. Symulacja Upływu Czasu
+player.ageUp();
+
+console.log(`Wiek po sezonie: ${player.age}`); // 18
