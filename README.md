@@ -60,8 +60,8 @@ Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
 
 | Szansa | Dyspozycja | Mnożnik statystyk ($\text{formMult}$) | Kara do meczów ($\text{karaDoMeczow}$) |
 | :--- | :--- | :--- | :--- |
-| **5%** | Beznadziejna | $0.50$ | $-30\%$ ($0.30$) |
-| **15%** | Słaba | $0.80$ | $-15\%$ ($0.15$) |
+| **5%** | Beznadziejna | $0.50$ | $-50\%$ ($0.50$) |
+| **15%** | Słaba | $0.80$ | $-25\%$ ($0.25$) |
 | **50%** | Średnia | $1.00$ | $0\%$ ($0.00$) |
 | **20%** | Dobra | $1.20$ | $0\%$ ($0.00$) |
 | **8%** | Bardzo Dobra | $1.40$ | $0\%$ ($0.00$) |
@@ -69,6 +69,9 @@ Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
 
 ### Obliczanie bieżącej formy:
 $$\text{forma} = \text{rand}(0, 100) + \text{profesjonalizm}$$
+
+Do rzutu na formę dodawany jest profesjonalizm. Ujemny profesjonalizm zwiększy szanse na słaby sezon, a wysoki profesjonalizm, zwiększy szanse na dobry sezon. 
+Np. professionalism=10 zwiększy szansę na sezon życia z 2%->12% oraz sprawi, że najgorsza forma jaka może się wylosować to słaba itp.
 
 ---
 
