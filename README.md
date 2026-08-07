@@ -65,7 +65,7 @@ Przed każdym sezonem losowany jest ogólny poziom dyspozycji zawodnika.
 | **50%** | Średnia | $1.00$ | $0\%$ ($0.00$) |
 | **20%** | Dobra | $1.20$ | $0\%$ ($0.00$) |
 | **8%** | Bardzo Dobra | $1.40$ | $0\%$ ($0.00$) |
-| **2%** | Sezon Życia | $1.75$ | $0\%$ ($0.00$) |
+| **2%** | Sezon Życia | $1.6$ | $0\%$ ($0.00$) |
 
 ### Obliczanie bieżącej formy:
 $$\text{forma} = \text{rand}(0, 100) + \text{profesjonalizm}$$

@@ -76,7 +76,7 @@ export const seasonalForm = (professionalism: number): SeasonalFormResult => {
         return { name: "Bardzo Dobra", multiplier: 1.4, gamesPenalty: 0 };
     }
 
-    return { name: "Sezon Zycia", multiplier: 1.75, gamesPenalty: 0 };
+    return { name: "Sezon Zycia", multiplier: 1.6, gamesPenalty: 0 };
 };
 
 export const simulateInjury = (injuryRisk: number): Injury | null =>{
@@ -94,5 +94,52 @@ export const simulateInjury = (injuryRisk: number): Injury | null =>{
     return null;
 }
 
+export const calculateGA = (position: Position, ovr: number, formMultiplier: number, clubOVR: number, leagueOVR: number): { goals: number; assists: number } => {
+    const [baseXG, baseXA] = baseGAPerGame(position);
+    const xgoals = baseXG * Math.pow(ovr / leagueOVR, 3) * Math.pow(clubOVR / leagueOVR, 2) * formMultiplier;
+    const xassists = baseXA * Math.pow(ovr / leagueOVR, 3) * Math.pow(clubOVR / leagueOVR, 2) * formMultiplier;
+    return { goals: xgoals, assists: xassists };
+}
 
+let ga = calculateGA("ST", 90, 1.6, 84, 76);
+console.log(ga);
 
+const samplePoisson = (lambda: number): number => {
+    // Zabezpieczenie przed xG/xA <= 0
+    if (lambda <= 0) return 0; 
+
+    const rand = Math.random();
+    let k = 0;
+    let p = Math.exp(-lambda); // P(K = 0)
+    let cumulativeProbability = p;
+
+    while (rand > cumulativeProbability) {
+        k++;
+        p = p * (lambda / k);
+        cumulativeProbability += p;
+    }
+
+    return k;
+};
+
+// Główna funkcja symulująca bramki i asysty w meczu
+export const simulateMatchGA = (xG: number, xA: number): { goals: number; assists: number } => {
+    console.log(samplePoisson(xG));
+    return {
+        goals: samplePoisson(xG),
+        assists: samplePoisson(xA)
+    };
+};
+
+console.log(ga.goals);
+console.log(ga.assists);
+let totalGoals = 0;
+let totalAssists = 0;
+for (let i = 0; i < 30; i++) {
+
+    const matchResult = simulateMatchGA(ga.goals, ga.assists);
+    totalGoals += matchResult.goals;
+    totalAssists += matchResult.assists;
+}
+console.log(`Total Goals in 30 matches: ${totalGoals}`);
+console.log(`Total Assists in 30 matches: ${totalAssists}`);

@@ -81,8 +81,8 @@ export class Footballer {
         return this._professionalism;
     }
     set professionalism(value: number) {
-        if (value < -10) this._professionalism = -10;
-        else if (value > 10) this._professionalism = 10;
+        if (value < -5) this._professionalism = -5;
+        else if (value > 5) this._professionalism = 5;
         else this._professionalism = value;
     }
 
