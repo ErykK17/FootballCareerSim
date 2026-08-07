@@ -4,7 +4,7 @@
 
 * **`poczatkowy_ovr`**: Wartość losowa z przedziału $[50, 65]$.
 * **`potencjal`**: Wartość losowa z przedziału $[\text{poczatkowyOvr}, 99]$.
-* **`profesjonalizm`**: Wartość losowa z przedziału $[-20, 20]$ (wpływa na stabilność formy i rozwój zawodnika).
+* **`profesjonalizm`**: Wartość losowa z przedziału $[-5, 5]$ (wpływa na stabilność formy i rozwój zawodnika).
 * **`injuryRisk`**: Podatność na kontuzje, przyjmuje wartości z przedziału $[1, 20]$ (`clamp(1, 20)`).
 
 ---
