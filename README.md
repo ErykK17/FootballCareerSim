@@ -113,16 +113,43 @@ Losowana jest wartość $\text{injurySeverityRoll} = \text{rand}(0.0, 100.0)$, a
 
 ## 7. Wzory Końcowe Statystyk Sezonowych
 
-Współczynnik dominacji ligowej wynosi **$E = 6.5$**.
-
 ### 1. Liczba rozegranych meczów w sezonie:
 
 $$\text{efektywneMecze} = \max\left(0, \; \left(\text{bazowaIloscMeczow} \times \text{pozycjaWSkladzie} \times (1 - \text{karaDoMeczow})\right) - \text{gamesMissed}\right)$$
 
 $$\text{gamesPlayedRatio} = \frac{\text{efektywneMecze}}{40}$$
 
-### 2. Wygenerowane bramki i asysty:
+### 2. Funkcja calculateGA
 
-$$\text{bramki} = \text{efektywneMecze} \times \text{bazoweGnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^{6.5} \times \text{formMult}$$
+Funkcja `calculateGA(position, ovr, formMultiplier, clubOVR, leagueOVR)` oblicza oczekiwaną liczbę bramek i asyst na mecz dla danego zawodnika. Najpierw pobiera bazowe wartości `G` i `A` dla pozycji z tabeli 4, a następnie mnoży je przez:
+- relatywny poziom zawodnika względem ligi: $\left(\frac{\text{ovr}}{\text{leagueOVR}}\right)^3$
+- relatywny poziom klubu względem ligi: $\left(\frac{\text{clubOVR}}{\text{leagueOVR}}\right)^2$
+- sezonową formę: `formMultiplier`
 
-$$\text{asysty} = \text{efektywneMecze} \times \text{bazoweAnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^{6.5} \times \text{formMult}$$
+Dzięki temu funkcja zwraca wartości `xG` i `xA`, czyli średnią liczbę bramek i asyst oczekiwaną w jednym meczu.
+
+$$\text{xG} = \text{bazoweGnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^3 \times \left(\frac{\text{clubOVR}}{\text{ovrLiga}}\right)^2 \times \text{formMult}$$
+
+$$\text{xA} = \text{bazoweAnaGre} \times \left(\frac{\text{ovr}}{\text{ovrLiga}}\right)^3 \times \left(\frac{\text{clubOVR}}{\text{ovrLiga}}\right)^2 \times \text{formMult}$$
+
+### 3. Funkcja samplePoisson
+
+Funkcja `samplePoisson(lambda)` zamienia wartość oczekiwaną (`xG` lub `xA`) w losowy wynik meczu zgodny z rozkładem Poissona. Jeśli `lambda <= 0`, zwraca `0`. W przeciwnym razie losuje liczbę zdarzeń, gdzie prawdopodobieństwo wystąpienia $k$ trafień jest budowane krok po kroku aż do przekroczenia losowej wartości. Dzięki temu z jednej średniej wartości powstaje realistyczna liczba goli lub asyst w konkretnym meczu.
+
+### 4. Wygenerowane bramki i asysty:
+
+Bramki i asysty generowane są na podstawie liczby rozegranych meczów, wartości `xG`/`xA` uzyskanych z `calculateGA` oraz wyniku losowania z `samplePoisson`:
+
+$$\text{bramki} = \text{samplePoisson}(\text{xG})$$
+
+$$\text{asysty} = \text{samplePoisson}(\text{xA})$$
+
+Gdzie:
+- **`efektywneMecze`** — liczba faktycznie rozegranych meczów (po uwzględnieniu czasu gry i kontuzji)
+- **`bazoweGnaGre`** / **`bazoweAnaGre`** — średnia liczba bramek/asyst na mecz dla danej pozycji (tabela 4)
+- **`ovr`** — obecny poziom zawodnika
+- **`clubOVR`** — średni poziom zawodników w klubie
+- **`ovrLiga`** — średni poziom zawodników w lidze
+- **`formMult`** — mnożnik formy sezonowej (tabela 5)
+- **`xG` / `xA`** — oczekiwane wartości bramek i asyst na mecz
+- **`samplePoisson`** — funkcja losująca realistyczny wynik zgodny z rozkładem Poissona
