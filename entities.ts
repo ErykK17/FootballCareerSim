@@ -21,14 +21,16 @@ export interface Injury {
 export class League {
     constructor(
         public ovr: number,
-        public country: string
+        public country: string,
+        public name: string,
     ) { }
 };
 
 export class Club {
     constructor(
         public league: League,
-        public ovr: number
+        public ovr: number,
+        public name: string,
     ) { }
 };
 
@@ -72,7 +74,7 @@ export class Footballer {
         return this._potential;
     }
     set potential(value: number) {
-        if (value < 1) this._potential = 1;
+        if (value < this.ovr) this._potential = this.ovr;
         else if (value > 99) this._potential = 99;
         else this._potential = value;
     }
