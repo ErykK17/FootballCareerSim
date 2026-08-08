@@ -231,15 +231,13 @@ export const growthSoftCap = (
     clubOvr: number
 ): number => {
     const ovrDiff = ovr - clubOvr;
-    if (ovrDiff <= 4) {
+    if (ovrDiff <= 5) {
         return 1.00;
-    } else if (ovrDiff <= 7) {
-        return 0.80;
-    } else if (ovrDiff <= 9) {
+    } else if (ovrDiff <= 7.5) {
+        return 0.75;
+    } else if (ovrDiff <= 10) {
         return 0.50;
-    } else if (ovrDiff <= 11) {
-        return 0.20;
     } else {
-        return 0.00;
+        return 0.25;
     }
 }
