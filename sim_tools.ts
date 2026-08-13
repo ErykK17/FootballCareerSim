@@ -5,31 +5,37 @@ export const getRandomFloat = (min: number, max: number): number => {
 }
 
 export const determinePlaytime = (footballer: Footballer, club: Club): number => {
+    console.log (footballer.ovr - footballer.club.ovr)
     let ovrDiff: number = footballer.ovr - club.ovr;
 
     if (ovrDiff >5) {
         footballer.club_status = "Gwiazda";
         let playTime = getRandomFloat(0.9, 0.95);
+        console.log(playTime);
         return playTime;
     }
     else if (ovrDiff >= 5) {
         footballer.club_status = "Kluczowy Zawodnik";
         let playTime = getRandomFloat(0.8, 0.9);
+        console.log(playTime);
         return playTime;
     }
     else if (ovrDiff >= 0) {
         footballer.club_status = "Pierwszy skład";
         let playTime = getRandomFloat(0.7, 0.8);
+        console.log(playTime);
         return playTime;
     }
     else if (ovrDiff >= -5) {
         footballer.club_status = "Zawodnik Rotacyjny";
         let playTime = getRandomFloat(0.3, 0.5);
+        console.log(playTime);
         return playTime;
     }
     else {
         footballer.club_status = "Rezerwowy";
         let playTime = getRandomFloat(0.05, 0.2);
+        console.log(playTime);
         return playTime;
     }
 
@@ -49,10 +55,10 @@ export const seasonalForm = (professionalism: number): SeasonalFormResult => {
     const form = getRandomFloat(0, 100) + professionalism;
 
     if (form <= 5) {
-        return { name: "Beznadziejna", multiplier: 0.5, gamesPenalty: -0.50 };
+        return { name: "Beznadziejna", multiplier: 0.5, gamesPenalty: 0.50 };
     }
     if (form <= 20) {
-        return { name: "Slaba", multiplier: 0.8, gamesPenalty: -0.25 };
+        return { name: "Slaba", multiplier: 0.8, gamesPenalty: 0.25 };
     }
     if (form <= 70) {
         return { name: "Srednia", multiplier: 1.0, gamesPenalty: 0 };
@@ -131,7 +137,8 @@ export const simulateGrowth = (
     gamesPlayed: number,
     gamesToPlay: number,
     seasonalFormMultiplier: number,
-    professionalism: number
+    professionalism: number,
+    debug?: boolean,
 ): { growth: number; potentialChange: number } => {
     // 1. Zabezpieczenie przed dzieleniem przez 0
     const playtimeRatio = gamesToPlay > 0 ? Math.min(1, Math.max(0, gamesPlayed / gamesToPlay)) : 0;
@@ -149,6 +156,9 @@ export const simulateGrowth = (
         const profShield = professionalism * 0.06;
 
         growth = naturalDecline + formShield + profShield;
+        if (debug){
+            console.log(`naturalDecline=${naturalDecline}, formShield=${formShield} profShield=${profShield}`)
+        }
     } else {
         // 3. Logika dla młodzieży (<= 21 lat): Dynamika Potencjału (Wzrost lub Strata)
         let playtimeFactor = 0;
@@ -167,15 +177,21 @@ export const simulateGrowth = (
                 const formBonus = Math.max(0.5, seasonalFormMultiplier);
 
                 potentialChange = basePotentialGain * profGainModifier * formBonus;
+                if (debug){
+                    console.log(`basePotentialGain = ${basePotentialGain}, profGainModifier=${profGainModifier}, formBonus=${formBonus}`);
+                }
             }
             // B) STRATA POTENCJAŁU (Brak gry < 40% meczów)
-            else if (playtimeRatio < 0.40) {
-                const basePenalty = (0.40 - playtimeRatio) * 6; // Baza: do ok. 2.4 pkt
+            else if (playtimeRatio < 0.30) {
+                const basePenalty = (0.30 - playtimeRatio) * 8; // Baza: do ok. 2.4 pkt
                 
                 // Modyfikator profesjonalizmu: [-10 -> 1.5x kary], [10 -> 0.5x kary]
                 const profPenaltyModifier = 1 - (professionalism * 0.05);
 
                 potentialChange = - basePenalty * Math.max(0.2, profPenaltyModifier);
+                if (debug){
+                    console.log(`basePenalty=${basePenalty}, profPenaltyModifier=${profPenaltyModifier}`);
+                }
             }
         } else {
             playtimeFactor = (playtimeRatio * 0.8) + 0.2;
@@ -189,7 +205,9 @@ export const simulateGrowth = (
         const softCap = growthSoftCap(ovr, clubOvr);
 
         growth = baseGrowthRate * ageFactor * professionalismFactor * playtimeFactor * seasonalFormMultiplier * softCap;
-        console.log(`DEBUG: baseGrowthRate=${baseGrowthRate.toFixed(2)}, ageFactor=${ageFactor.toFixed(2)}, professionalismFactor=${professionalismFactor.toFixed(2)}, playtimeFactor=${playtimeFactor.toFixed(2)}, seasonalFormMultiplier=${seasonalFormMultiplier.toFixed(2)}, softCap=${softCap.toFixed(2)}`);
+        if (debug){
+            console.log(`DEBUG: baseGrowthRate=${baseGrowthRate.toFixed(2)}, ageFactor=${ageFactor.toFixed(2)}, professionalismFactor=${professionalismFactor.toFixed(2)}, playtimeFactor=${playtimeFactor.toFixed(2)}, seasonalFormMultiplier=${seasonalFormMultiplier.toFixed(2)}, softCap=${softCap.toFixed(2)}`);
+        }
     }
 
     // 4. Zabezpieczenie przed przekroczeniem skorygowanego potencjału (chyba że Sezon Życia)

@@ -12,7 +12,7 @@ const { stdin: input, stdout: output } = process
 export { sim_tools, entities }
 
 const rl = createInterface({ input, output })
-const startingOvr = sim_tools.getRandomFloat(65, 65)
+const startingOvr = sim_tools.getRandomFloat(50, 65)
 
 const eryk_krygier = new entities.Footballer({
     ovr: startingOvr,
@@ -48,130 +48,84 @@ function printPlayerStats(player: entities.Footballer, name: string = "Zawodnik"
     `);
 }
 
-function printSeasonSummary(
-    seasonIndex: number,
-    gamesPlayed: number,
-    gamesInSeason: number,
-    gamesMissed: number,
-    playtime: number,
-    seasonalFormResult: { name: string; multiplier: number },
-    expected_g_a: { goals: number; assists: number },
-    totalGoals: number,
-    totalAssists: number,
-    growth: number,
-    potentialChange: number,
-    ovrBeforeSeason: number,
-    ovrAfterSeason: number,
-) {
-    const expectedGoals = expected_g_a.goals * gamesPlayed
-    const expectedAssists = expected_g_a.assists * gamesPlayed
-    const averageGoalsPerGame = gamesPlayed > 0 ? totalGoals / gamesPlayed : 0
-    const averageAssistsPerGame = gamesPlayed > 0 ? totalAssists / gamesPlayed : 0
-
-    console.log(`Sezon ${seasonIndex} zakończony. Statystyki:`)
-    console.log(`Mecze rozegrane: ${gamesPlayed}/${gamesInSeason}, współczynnik ${playtime.toFixed(2)}, ${gamesMissed.toFixed(0)} opuszczonych meczów z powodu kontuzji`)
-    console.log(`Forma sezonowa: ${seasonalFormResult.name}`)
-    console.log(`Bramki: ${totalGoals.toFixed(0)}, (xG: ${expectedGoals.toFixed(2)})`)
-    console.log(`Asysty: ${totalAssists.toFixed(0)}, (xA: ${expectedAssists.toFixed(2)})`)
-    console.log(`Średnia bramek na mecz: ${averageGoalsPerGame.toFixed(2)}`)
-    console.log(`Średnia asyst na mecz: ${averageAssistsPerGame.toFixed(2)}`)
-    console.log(`Wzrost statystyk w tym sezonie: ${growth.toFixed(2)}`)
-    console.log(`Zmiana potencjału w tym sezonie: ${potentialChange.toFixed(2)}`)
-    console.log(`OVR przed sezonem: ${ovrBeforeSeason.toFixed(1)} | OVR po sezonie: ${ovrAfterSeason.toFixed(1)}`)
-}
-
 function simulateSeasonInternal(player: entities.Footballer, seasonIndex: number, debug: boolean = false) {
     let gamesPlayed = 0
     let totalGoals = 0
     let totalAssists = 0
-
+    const startingOvr = player.ovr
+    const startingPotential = player.potential
+    
     const seasonHeader = ` SEZON ${seasonIndex} — Wiek: ${player.age} `
     console.log("\n" + "#".repeat(60))
     console.log(seasonHeader.padStart(Math.floor((60 + seasonHeader.length) / 2)).padEnd(60))
     console.log("#".repeat(60))
-
+    
     const seasonalFormResult = sim_tools.seasonalForm(player.professionalism)
-
+    
     const injury = sim_tools.simulateInjury(player.injuryRisk)
     let gamesMissed = 0
     if (injury != null) {
         gamesMissed = sim_tools.getRandomFloat(injury.gamesMissed[0], injury.gamesMissed[1])
-        console.log('Doznałeś kontuzji: ' + injury.name + ', przewidywana liczba opuszczonych meczów: ' + gamesMissed.toFixed(0))
+        console.log('Doznałeś kontuzji: ' + injury.name + ', liczba opuszczonych meczów: ' + gamesMissed.toFixed(0))
     }
     else {
         console.log('Nie doznałeś kontuzji w tym sezonie.')
     }
-
+    
     const expected_g_a = sim_tools.calculateGA(player.position, Math.floor(player.ovr), seasonalFormResult.multiplier, player.club.ovr, player.club.league.ovr)
-    const playtime = sim_tools.determinePlaytime(player, player.club)
+    const playtime = sim_tools.determinePlaytime(player, player.club) * (1-seasonalFormResult.gamesPenalty)
+    
     const gamesInSeason = 45
-    const gamesToPlay = Math.max(0, Math.floor(gamesInSeason * playtime) - gamesMissed)
+    const gamesToPlay = Math.max(0, Math.floor(gamesInSeason * playtime) - gamesMissed) + Math.floor(sim_tools.getRandomFloat(0,5))
+    
     gamesPlayed = gamesToPlay
-
+    
     for (let i = 0; i < gamesToPlay; i++) {
         const ga = sim_tools.simulateMatchGA(expected_g_a['goals'], expected_g_a['assists'])
         totalGoals += ga['goals']
         totalAssists += ga['assists']
     }
-
-    const ovrBeforeSeason = player.ovr
-    const growth = sim_tools.simulateGrowth(player.age, player.ovr, player.potential, player.club.ovr, gamesPlayed, gamesInSeason, seasonalFormResult.multiplier, player.professionalism)
+    
+    const growth = sim_tools.simulateGrowth(player.age, player.ovr, player.potential, player.club.ovr, gamesPlayed, gamesInSeason, seasonalFormResult.multiplier, player.professionalism, debug)
+    
     player.ovr += growth['growth']
     player.potential += growth['potentialChange']
-
+    
+    console.log(`Forma sezonowa: ${seasonalFormResult.name}, współczynnik: ${seasonalFormResult.multiplier.toFixed(2)}`)
+    console.log(`Wzrost umiejętnosci w tym sezonie: ${growth.growth} (${startingOvr} -> ${player.ovr})`)
+    console.log(`Wzrost potencjału w tym sezonie: ${growth.potentialChange} (${startingPotential} -> ${player.potential})`)
+    console.log(`Szansa na grę: ${playtime}`)
+    console.log(`Rozegrałeś ${gamesToPlay}/${gamesInSeason} (${(gamesToPlay/gamesInSeason*100).toFixed(2)}%) meczy`)
+    console.log(`G/A: ${totalGoals}G (${(expected_g_a['goals'] * gamesToPlay).toFixed(2)} xG)/ ${totalAssists} (${(expected_g_a['assists'] * gamesToPlay).toFixed(2)} xA)`)
     printPlayerStats(player, `Sezon ${seasonIndex}`)
-
-    printSeasonSummary(
-        seasonIndex,
-        gamesPlayed,
-        gamesInSeason,
-        gamesMissed,
-        playtime,
-        seasonalFormResult,
-        expected_g_a,
-        totalGoals,
-        totalAssists,
-        growth['growth']    ,
-        growth['potentialChange'],
-        ovrBeforeSeason,
-        player.ovr,
-    )
-}
-
-function simulateSeason(player: entities.Footballer, seasonIndex: number) {
-    simulateSeasonInternal(player, seasonIndex, false)
-}
-
-function simulateSeasonDebug(player: entities.Footballer, seasonIndex: number) {
-    simulateSeasonInternal(player, seasonIndex, true)
 }
 
 async function askToContinueNextSeason(): Promise<boolean> {
     const answer = await new Promise<string>((resolve) => {
         rl.question('Czy chcesz symulować kolejny sezon? [t/n]: ', (input: string) => resolve(input))
     })
-
+    
     const normalizedAnswer = answer.trim().toLowerCase()
     return normalizedAnswer === 't' || normalizedAnswer === 'tak' || normalizedAnswer === 'y' || normalizedAnswer === 'yes'
 }
 
 async function simulateCareer(player: entities.Footballer) {
-    printPlayerStats(player, 'Początek kariery')
-
+    printPlayerStats(player, 'Początek kariery');
+    
     let season = 1
     while (true) {
-        simulateSeasonDebug(player, season)
+        simulateSeasonInternal(player, season, false)
         player.ageUp()
-
+        
         const shouldContinue = await askToContinueNextSeason()
         if (!shouldContinue) {
             console.log('Statystyki końcowe zawodnika po zakończeniu kariery:');
             break
         }
-
+        
         season++
     }
-
+    
     rl.close()
 }
 
